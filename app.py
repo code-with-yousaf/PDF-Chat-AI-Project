@@ -21,23 +21,30 @@ DATA = "data"; os.makedirs(DATA, exist_ok=True)
 
 @st.cache_resource(show_spinner=False)
 def get_ai_client():
-    """Get AI client (supports Hugging Face Inference API)"""
+    """Get AI client (supports OpenAI, Groq, Hugging Face)"""
     if not OPENAI_OK: 
         return None, "OpenAI library not installed"
     
     # Try to get API key from secrets or env
     api_key = None
     if hasattr(st, 'secrets'):
-        api_key = st.secrets.get("HUGGINGFACE_API_KEY") or st.secrets.get("GROQ_API_KEY")
+        api_key = (st.secrets.get("OPENAI_API_KEY") or 
+                   st.secrets.get("GROQ_API_KEY") or 
+                   st.secrets.get("HUGGINGFACE_API_KEY"))
     if not api_key:
-        api_key = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("GROQ_API_KEY")
+        api_key = (os.getenv("OPENAI_API_KEY") or 
+                   os.getenv("GROQ_API_KEY") or 
+                   os.getenv("HUGGINGFACE_API_KEY"))
     
     if not api_key:
-        return None, "No API key found. Add HUGGINGFACE_API_KEY to Streamlit secrets."
+        return None, "No API key found. Add OPENAI_API_KEY to Streamlit secrets."
     
     try:
-        # Check which API to use based on key
-        if api_key.startswith("hf_"):
+        # Detect which API based on key format
+        if api_key.startswith("sk-") and not api_key.startswith("sk-or-"):
+            # OpenAI API (default)
+            client = OpenAI(api_key=api_key)
+        elif api_key.startswith("hf_"):
             # Hugging Face API
             client = OpenAI(
                 api_key=api_key,
@@ -74,10 +81,26 @@ def chat_with_ai(messages, client):
     
     try:
         # Try different models based on API
-        models = [
-            "meta-llama/Meta-Llama-3-8B-Instruct",  # Hugging Face
-            "llama-3.1-70b-versatile",  # Groq fallback
-        ]
+        models = []
+        
+        # Detect API type from key or client
+        if hasattr(st, 'secrets'):
+            key = (st.secrets.get("OPENAI_API_KEY") or 
+                   st.secrets.get("GROQ_API_KEY") or 
+                   st.secrets.get("HUGGINGFACE_API_KEY") or "")
+        else:
+            key = ""
+        
+        # Choose models based on API
+        if key.startswith("sk-") and not key.startswith("sk-or-"):
+            # OpenAI
+            models = ["gpt-3.5-turbo", "gpt-4o-mini"]
+        elif key.startswith("hf_"):
+            # Hugging Face
+            models = ["meta-llama/Meta-Llama-3-8B-Instruct"]
+        else:
+            # Groq
+            models = ["llama-3.1-70b-versatile"]
         
         response = None
         for model in models:
@@ -89,7 +112,7 @@ def chat_with_ai(messages, client):
                     max_tokens=2000,
                 )
                 break
-            except:
+            except Exception as model_error:
                 continue
         
         if response:
