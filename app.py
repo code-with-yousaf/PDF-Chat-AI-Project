@@ -59,12 +59,13 @@ def get_ai_client():
             client = OpenAI(api_key=api_key)
             return client, f"Connected to OpenAI (key: {api_key[:15]}...)"
         elif api_key.startswith("sk-") and len(api_key) < 60:
-            # Agnes AI or similar proxy service (shorter keys)
-            client = OpenAI(
-                api_key=api_key,
-                base_url="https://api.agnes-ai.com/v1"  # Agnes AI endpoint
-            )
-            return client, f"Connected to Agnes AI (key: {api_key[:15]}...)"
+            # Agnes AI or similar proxy - try OpenAI first (most compatible)
+            try:
+                client = OpenAI(api_key=api_key)
+                return client, f"Connected via OpenAI API (key: {api_key[:15]}...)"
+            except:
+                # If OpenAI fails, it might be a custom service
+                return None, f"Key format not recognized. Agnes AI may not be OpenAI-compatible."
         elif api_key.startswith("sk-"):
             # Standard OpenAI key
             client = OpenAI(api_key=api_key)
