@@ -27,38 +27,49 @@ def get_ai_client():
     
     # Try to get API key from secrets or env
     api_key = None
+    key_source = "not found"
+    
     if hasattr(st, 'secrets'):
-        api_key = (st.secrets.get("OPENAI_API_KEY") or 
-                   st.secrets.get("GROQ_API_KEY") or 
-                   st.secrets.get("HUGGINGFACE_API_KEY"))
-    if not api_key:
-        api_key = (os.getenv("OPENAI_API_KEY") or 
-                   os.getenv("GROQ_API_KEY") or 
-                   os.getenv("HUGGINGFACE_API_KEY"))
+        if "OPENAI_API_KEY" in st.secrets:
+            api_key = st.secrets["OPENAI_API_KEY"]
+            key_source = "OPENAI_API_KEY from secrets"
+        elif "GROQ_API_KEY" in st.secrets:
+            api_key = st.secrets["GROQ_API_KEY"]
+            key_source = "GROQ_API_KEY from secrets"
+        elif "HUGGINGFACE_API_KEY" in st.secrets:
+            api_key = st.secrets["HUGGINGFACE_API_KEY"]
+            key_source = "HUGGINGFACE_API_KEY from secrets"
     
     if not api_key:
-        return None, "No API key found. Add OPENAI_API_KEY to Streamlit secrets."
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("GROQ_API_KEY") or os.getenv("HUGGINGFACE_API_KEY")
+        if api_key:
+            key_source = "environment variable"
+    
+    if not api_key:
+        return None, f"No API key found. Checked: {key_source}. Add OPENAI_API_KEY to Streamlit secrets."
     
     try:
         # Detect which API based on key format
         if api_key.startswith("sk-") and not api_key.startswith("sk-or-"):
             # OpenAI API (default)
             client = OpenAI(api_key=api_key)
+            return client, f"Connected to OpenAI (key: {api_key[:15]}...)"
         elif api_key.startswith("hf_"):
             # Hugging Face API
             client = OpenAI(
                 api_key=api_key,
                 base_url="https://api-inference.huggingface.co/v1/"
             )
+            return client, "Connected to Hugging Face"
         else:
             # Groq API
             client = OpenAI(
                 api_key=api_key,
                 base_url="https://api.groq.com/openai/v1"
             )
-        return client, None
+            return client, "Connected to Groq"
     except Exception as e:
-        return None, str(e)
+        return None, f"Client creation error: {str(e)}"
 
 def chat_with_ai(messages, client):
     """Send messages to AI and get response"""
@@ -77,32 +88,31 @@ def chat_with_ai(messages, client):
             return "**Available Features:**\n\n🏠 **Home** - Start a new chat\n💬 **Chat** - Talk with AI assistant\n📄 **Sources** - Upload PDF documents\n🎨 **Studio** - AI tools and features\n⚙️ **Settings** - Configure preferences\n\n*Full AI features available after adding API key!*"
         
         else:
-            return f"🤖 **Demo Mode Active**\n\nYou said: *\"{messages[-1]['content']}\"*\n\nThis is a placeholder response. To get real AI-powered answers:\n\n1. Get a free API key:\n   - **Groq**: https://console.groq.com (fastest)\n   - **Hugging Face**: https://huggingface.co/settings/tokens\n   - **OpenRouter**: https://openrouter.ai/keys\n\n2. Add to Streamlit secrets:\n   ```\n   GROQ_API_KEY = \"your_key\"\n   ```\n\n3. Enjoy unlimited AI chat! 🚀\n\n---\n*Meanwhile, explore the beautiful space-themed UI!* ✨"
+            return f"🤖 **Demo Mode Active**\n\nYou said: *\"{messages[-1]['content']}\"*\n\nThis is a placeholder response. To get real AI-powered answers:\n\n1. Get a free API key:\n   - **Groq**: https://console.groq.com (fastest)\n   - **Hugging Face**: https://huggingface.co/settings/tokens\n   - **OpenRouter**: https://openrouter.ai/keys\n\n2. Add to Streamlit secrets:\n   ```\n   OPENAI_API_KEY = \"your_key\"\n   ```\n\n3. Enjoy unlimited AI chat! 🚀\n\n---\n*Meanwhile, explore the beautiful space-themed UI!* ✨"
     
     try:
-        # Try different models based on API
-        models = []
-        
-        # Detect API type from key or client
+        # Detect API type from key
+        key = ""
         if hasattr(st, 'secrets'):
-            key = (st.secrets.get("OPENAI_API_KEY") or 
-                   st.secrets.get("GROQ_API_KEY") or 
-                   st.secrets.get("HUGGINGFACE_API_KEY") or "")
-        else:
-            key = ""
+            key = (st.secrets.get("OPENAI_API_KEY", "") or 
+                   st.secrets.get("GROQ_API_KEY", "") or 
+                   st.secrets.get("HUGGINGFACE_API_KEY", ""))
         
         # Choose models based on API
-        if key.startswith("sk-") and not key.startswith("sk-or-"):
+        models = []
+        if key.startswith("sk-proj-") or (key.startswith("sk-") and not key.startswith("sk-or-")):
             # OpenAI
             models = ["gpt-3.5-turbo", "gpt-4o-mini"]
         elif key.startswith("hf_"):
             # Hugging Face
             models = ["meta-llama/Meta-Llama-3-8B-Instruct"]
         else:
-            # Groq
-            models = ["llama-3.1-70b-versatile"]
+            # Groq or fallback
+            models = ["llama-3.1-70b-versatile", "gpt-3.5-turbo"]
         
         response = None
+        last_error = None
+        
         for model in models:
             try:
                 response = client.chat.completions.create(
@@ -113,15 +123,16 @@ def chat_with_ai(messages, client):
                 )
                 break
             except Exception as model_error:
+                last_error = str(model_error)
                 continue
         
         if response:
             return response.choices[0].message.content
         else:
-            return "⚠️ Could not connect to AI service. Please check your API key."
+            return f"⚠️ Could not connect to AI service.\n\n**Error:** {last_error}\n\n**Debug:**\n- Key starts with: {key[:10]}...\n- Tried models: {models}\n\nPlease verify your API key is valid and has credits."
             
     except Exception as e:
-        return f"❌ AI Error: {str(e)}\n\nTry demo mode or check your API key configuration."
+        return f"❌ AI Error: {str(e)}\n\n**Debug Info:**\n- Check if API key is correct\n- Verify you have credits/quota\n- Try restarting the app\n\nOr switch to demo mode (remove API key)."
 
 @st.cache_resource(show_spinner=False)
 def get_rag(_h):
