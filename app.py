@@ -29,32 +29,39 @@ def get_ai_client():
     api_key = None
     key_source = "not found"
     
-    if hasattr(st, 'secrets'):
-        if "OPENROUTER_API_KEY" in st.secrets:
-            api_key = st.secrets["OPENROUTER_API_KEY"]
-            key_source = "OPENROUTER_API_KEY from secrets"
-        elif "OPENAI_API_KEY" in st.secrets:
-            api_key = st.secrets["OPENAI_API_KEY"]
-            key_source = "OPENAI_API_KEY from secrets"
-        elif "AGNES_API_KEY" in st.secrets:
-            api_key = st.secrets["AGNES_API_KEY"]
-            key_source = "AGNES_API_KEY from secrets"
-        elif "GROQ_API_KEY" in st.secrets:
-            api_key = st.secrets["GROQ_API_KEY"]
-            key_source = "GROQ_API_KEY from secrets"
-        elif "HUGGINGFACE_API_KEY" in st.secrets:
-            api_key = st.secrets["HUGGINGFACE_API_KEY"]
-            key_source = "HUGGINGFACE_API_KEY from secrets"
+    try:
+        if hasattr(st, 'secrets'):
+            if "OPENROUTER_API_KEY" in st.secrets:
+                api_key = st.secrets["OPENROUTER_API_KEY"]
+                key_source = "OPENROUTER_API_KEY from secrets"
+            elif "OPENAI_API_KEY" in st.secrets:
+                api_key = st.secrets["OPENAI_API_KEY"]
+                key_source = "OPENAI_API_KEY from secrets"
+            elif "AGNES_API_KEY" in st.secrets:
+                api_key = st.secrets["AGNES_API_KEY"]
+                key_source = "AGNES_API_KEY from secrets"
+            elif "GROQ_API_KEY" in st.secrets:
+                api_key = st.secrets["GROQ_API_KEY"]
+                key_source = "GROQ_API_KEY from secrets"
+            elif "HUGGINGFACE_API_KEY" in st.secrets:
+                api_key = st.secrets["HUGGINGFACE_API_KEY"]
+                key_source = "HUGGINGFACE_API_KEY from secrets"
+    except:
+        pass  # Secrets not available or empty
     
     if not api_key:
-        api_key = (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or 
-                   os.getenv("AGNES_API_KEY") or os.getenv("GROQ_API_KEY") or 
-                   os.getenv("HUGGINGFACE_API_KEY"))
-        if api_key:
-            key_source = "environment variable"
+        try:
+            api_key = (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or 
+                       os.getenv("AGNES_API_KEY") or os.getenv("GROQ_API_KEY") or 
+                       os.getenv("HUGGINGFACE_API_KEY"))
+            if api_key:
+                key_source = "environment variable"
+        except:
+            pass
     
     if not api_key:
-        return None, f"No API key found. Add OPENROUTER_API_KEY or GROQ_API_KEY to Streamlit secrets."
+        # Demo mode - no API key configured
+        return None, None
     
     try:
         # Detect which API based on key format
@@ -75,7 +82,7 @@ def get_ai_client():
                 client = OpenAI(api_key=api_key)
                 return client, f"Connected via OpenAI API (key: {api_key[:15]}...)"
             except:
-                return None, f"Key format not recognized or invalid."
+                return None, None
         elif api_key.startswith("sk-"):
             # Standard OpenAI key
             client = OpenAI(api_key=api_key)
@@ -95,7 +102,8 @@ def get_ai_client():
             )
             return client, "Connected to Groq"
     except Exception as e:
-        return None, f"Client creation error: {str(e)}"
+        # If any error, return None for demo mode
+        return None, None
 
 def chat_with_ai(messages, client):
     """Send messages to AI and get response"""
