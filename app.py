@@ -56,7 +56,21 @@ def get_ai_client():
 def chat_with_ai(messages, client):
     """Send messages to AI and get response"""
     if not client:
-        return "⚠️ AI not configured. Please add HUGGINGFACE_API_KEY to settings."
+        # Demo mode - return intelligent placeholder responses
+        user_msg = messages[-1]["content"].lower() if messages else ""
+        
+        # Simple keyword-based demo responses
+        if "hello" in user_msg or "hi" in user_msg or "hey" in user_msg:
+            return "👋 Hello! I'm your AI Assistant. I'm currently in demo mode. To enable full AI features, please add your API key (Groq, Hugging Face, or OpenAI) in the Streamlit secrets.\n\n**Free API Options:**\n- Groq (fastest, 14k requests/day)\n- Hugging Face (unlimited)\n- Together AI ($25 free credit)\n\nFor now, enjoy the beautiful UI! ✨"
+        
+        elif "how are you" in user_msg or "kaise ho" in user_msg:
+            return "I'm doing great! 😊 This is a demo response. Connect an AI API to get real intelligent responses!"
+        
+        elif "help" in user_msg or "mada" in user_msg:
+            return "**Available Features:**\n\n🏠 **Home** - Start a new chat\n💬 **Chat** - Talk with AI assistant\n📄 **Sources** - Upload PDF documents\n🎨 **Studio** - AI tools and features\n⚙️ **Settings** - Configure preferences\n\n*Full AI features available after adding API key!*"
+        
+        else:
+            return f"🤖 **Demo Mode Active**\n\nYou said: *\"{messages[-1]['content']}\"*\n\nThis is a placeholder response. To get real AI-powered answers:\n\n1. Get a free API key:\n   - **Groq**: https://console.groq.com (fastest)\n   - **Hugging Face**: https://huggingface.co/settings/tokens\n   - **OpenRouter**: https://openrouter.ai/keys\n\n2. Add to Streamlit secrets:\n   ```\n   GROQ_API_KEY = \"your_key\"\n   ```\n\n3. Enjoy unlimited AI chat! 🚀\n\n---\n*Meanwhile, explore the beautiful space-themed UI!* ✨"
     
     try:
         # Try different models based on API
@@ -84,7 +98,7 @@ def chat_with_ai(messages, client):
             return "⚠️ Could not connect to AI service. Please check your API key."
             
     except Exception as e:
-        return f"❌ AI Error: {str(e)}"
+        return f"❌ AI Error: {str(e)}\n\nTry demo mode or check your API key configuration."
 
 @st.cache_resource(show_spinner=False)
 def get_rag(_h):
