@@ -10,62 +10,65 @@ st.set_page_config(
 )
 
 # ── optional libs ─────────────────────────────────────────────
-try:    import edge_tts, asyncio;  EDGE_TTS = True
-except: EDGE_TTS = False
-try:    from duckduckgo_search import DDGS; DDGS_OK = True
-except: DDGS_OK = False
-try:
-    from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Settings
-    from llama_index.llms.ollama import Ollama
-    from llama_index.embeddings.ollama import OllamaEmbedding
-    LLAMA_OK = True
-except: LLAMA_OK = False
+try:    
+    from openai import OpenAI
+    OPENAI_OK = True
+except: 
+    OPENAI_OK = False
 
 os.environ["DISABLE_SQLALCHEMY_CEXT"] = "1"
 DATA = "data"; os.makedirs(DATA, exist_ok=True)
 
 @st.cache_resource(show_spinner=False)
-def load_llm():
-    if not LLAMA_OK: return None, "llama_index not installed"
+def get_ai_client():
+    """Get OpenAI-compatible client (supports Groq, OpenAI, etc)"""
+    if not OPENAI_OK: 
+        return None, "OpenAI library not installed"
+    
+    # Try to get API key from secrets or env
+    api_key = st.secrets.get("GROQ_API_KEY") if hasattr(st, 'secrets') else os.getenv("GROQ_API_KEY")
+    
+    if not api_key:
+        return None, "No API key found. Add GROQ_API_KEY to Streamlit secrets."
+    
     try:
-        llm = Ollama(model="llama3.2:3b", request_timeout=300.0)
-        emb = OllamaEmbedding(model_name="nomic-embed-text")
-        Settings.llm = llm; Settings.embed_model = emb
-        return llm, None
-    except Exception as e: return None, str(e)
+        # Groq uses OpenAI-compatible API
+        client = OpenAI(
+            api_key=api_key,
+            base_url="https://api.groq.com/openai/v1"
+        )
+        return client, None
+    except Exception as e:
+        return None, str(e)
+
+def chat_with_ai(messages, client):
+    """Send messages to AI and get response"""
+    if not client:
+        return "⚠️ AI not configured. Please add GROQ_API_KEY to settings."
+    
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.1-70b-versatile",  # Groq's fast model
+            messages=messages,
+            temperature=0.7,
+            max_tokens=2000,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"❌ AI Error: {str(e)}"
 
 @st.cache_resource(show_spinner=False)
 def get_rag(_h):
-    if not LLAMA_OK: return None
-    srcs = [f for f in os.listdir(DATA) if f.endswith((".pdf",".txt"))]
-    if not srcs: return None
-    try:
-        docs = SimpleDirectoryReader(DATA, required_exts=[".pdf",".txt"]).load_data()
-        return VectorStoreIndex.from_documents(docs).as_query_engine(streaming=True)
-    except: return None
+    return None  # Disabled for cloud deployment
 
 def fhash():
-    return str(sorted((f, os.path.getsize(os.path.join(DATA,f)))
-               for f in os.listdir(DATA) if f.endswith((".pdf",".txt"))))
+    return ""  # Disabled
 
 def gen_audio(text):
-    if not EDGE_TTS: return None
-    fname = f"sp_{''.join(random.choices(string.ascii_lowercase,k=5))}.mp3"
-    errs=[]
-    def _r():
-        try:
-            loop=asyncio.new_event_loop(); asyncio.set_event_loop(loop)
-            loop.run_until_complete(edge_tts.Communicate(text,"en-US-ChristopherNeural").save(fname))
-            loop.close()
-        except Exception as e: errs.append(e)
-    t=threading.Thread(target=_r,daemon=True); t.start(); t.join(timeout=30)
-    return fname if not errs and os.path.exists(fname) else None
+    return None  # Disabled for cloud deployment
 
 def web_search(q):
-    if not DDGS_OK: return "DuckDuckGo not installed."
-    try:
-        with DDGS() as d: return "\n\n".join(r["body"] for r in d.text(q,max_results=4))
-    except Exception as e: return f"Search failed: {e}"
+    return "Web search temporarily disabled in cloud version."
 
 LANGS = {
     "🇵🇰 Roman Urdu": "Sirf Roman Urdu mein jawab do (Urdu ko Latin mein likho). English sentences mat likho.",
@@ -102,7 +105,7 @@ for k,v in {
 }.items():
     if k not in st.session_state: st.session_state[k]=v
 
-llm, llm_err = load_llm()
+llm, llm_err = get_ai_client()
 
 # ════════════════════════════════════════════════════════════
 #  BACKGROUND CANVAS — stars + beam (inject once)
@@ -266,26 +269,32 @@ elif st.session_state.view == "chat":
         full=""; err=None; mv=st.session_state.mode
         try:
             if llm is None:
-                err="⚠️ Ollama not running. Start Ollama & pull `llama3.2:3b` + `nomic-embed-text`."
-            elif "Docs" in mv:
-                eng=get_rag(fhash())
-                if eng:
-                    r=eng.query(build_prompt(prompt2)); slot.empty()
-                    with chat_area.chat_message("assistant"):
-                        ph=st.empty()
-                        for chunk in r.response_gen: full+=chunk; ph.markdown(full+"▌")
-                        ph.markdown(full)
-                else: err="📭 No docs. Upload PDFs in Sources first."
-            elif "Web" in mv:
-                slot.markdown('<div class="spin-c"><div class="spin-i"></div><div><div class="spin-t">Searching…</div></div></div>', unsafe_allow_html=True)
-                ctx=web_search(prompt2)
-                slot.markdown('<div class="spin-c"><div class="spin-i"></div><div><div class="spin-t">Generating…</div></div></div>', unsafe_allow_html=True)
-                full=Settings.llm.complete(build_prompt(prompt2,ctx)).text; slot.empty()
-                with chat_area.chat_message("assistant"): st.markdown(full)
+                err = llm_err if llm_err else "⚠️ AI not configured. Add GROQ_API_KEY to Streamlit secrets."
             else:
-                full=Settings.llm.complete(build_prompt(prompt2)).text; slot.empty()
-                with chat_area.chat_message("assistant"): st.markdown(full)
-        except Exception as e: err=f"❌ `{e}`"
+                # Build conversation history for AI
+                lang = st.session_state.get("language","🇬🇧 English")
+                instr = LANGS.get(lang,"Reply in English.")
+                
+                conv_messages = [{
+                    "role": "system",
+                    "content": f"You are a helpful AI assistant. {instr} Answer thoroughly with formatting."
+                }]
+                
+                # Add conversation history
+                for m in st.session_state.messages[-6:]:  # Last 6 messages for context
+                    conv_messages.append({
+                        "role": m["role"],
+                        "content": m["content"]
+                    })
+                
+                # Get AI response
+                full = chat_with_ai(conv_messages, llm)
+                slot.empty()
+                with chat_area.chat_message("assistant"):
+                    st.markdown(full)
+                    
+        except Exception as e: 
+            err=f"❌ `{e}`"
 
         slot.empty()
         if err:
@@ -293,9 +302,7 @@ elif st.session_state.view == "chat":
             with chat_area.chat_message("assistant"): st.markdown(err)
 
         st.session_state.messages.append({"role":"assistant","content":full})
-        if st.session_state.tts and EDGE_TTS and len(full)>10:
-            ap=gen_audio(full[:400])
-            if ap: st.session_state.last_audio=ap
+        # TTS disabled for cloud
         st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
