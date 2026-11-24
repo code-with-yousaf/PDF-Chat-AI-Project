@@ -21,22 +21,34 @@ DATA = "data"; os.makedirs(DATA, exist_ok=True)
 
 @st.cache_resource(show_spinner=False)
 def get_ai_client():
-    """Get OpenAI-compatible client (supports Groq, OpenAI, etc)"""
+    """Get AI client (supports Hugging Face Inference API)"""
     if not OPENAI_OK: 
         return None, "OpenAI library not installed"
     
     # Try to get API key from secrets or env
-    api_key = st.secrets.get("GROQ_API_KEY") if hasattr(st, 'secrets') else os.getenv("GROQ_API_KEY")
+    api_key = None
+    if hasattr(st, 'secrets'):
+        api_key = st.secrets.get("HUGGINGFACE_API_KEY") or st.secrets.get("GROQ_API_KEY")
+    if not api_key:
+        api_key = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("GROQ_API_KEY")
     
     if not api_key:
-        return None, "No API key found. Add GROQ_API_KEY to Streamlit secrets."
+        return None, "No API key found. Add HUGGINGFACE_API_KEY to Streamlit secrets."
     
     try:
-        # Groq uses OpenAI-compatible API
-        client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.groq.com/openai/v1"
-        )
+        # Check which API to use based on key
+        if api_key.startswith("hf_"):
+            # Hugging Face API
+            client = OpenAI(
+                api_key=api_key,
+                base_url="https://api-inference.huggingface.co/v1/"
+            )
+        else:
+            # Groq API
+            client = OpenAI(
+                api_key=api_key,
+                base_url="https://api.groq.com/openai/v1"
+            )
         return client, None
     except Exception as e:
         return None, str(e)
@@ -44,16 +56,33 @@ def get_ai_client():
 def chat_with_ai(messages, client):
     """Send messages to AI and get response"""
     if not client:
-        return "⚠️ AI not configured. Please add GROQ_API_KEY to settings."
+        return "⚠️ AI not configured. Please add HUGGINGFACE_API_KEY to settings."
     
     try:
-        response = client.chat.completions.create(
-            model="llama-3.1-70b-versatile",  # Groq's fast model
-            messages=messages,
-            temperature=0.7,
-            max_tokens=2000,
-        )
-        return response.choices[0].message.content
+        # Try different models based on API
+        models = [
+            "meta-llama/Meta-Llama-3-8B-Instruct",  # Hugging Face
+            "llama-3.1-70b-versatile",  # Groq fallback
+        ]
+        
+        response = None
+        for model in models:
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=2000,
+                )
+                break
+            except:
+                continue
+        
+        if response:
+            return response.choices[0].message.content
+        else:
+            return "⚠️ Could not connect to AI service. Please check your API key."
+            
     except Exception as e:
         return f"❌ AI Error: {str(e)}"
 
