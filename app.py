@@ -21,7 +21,7 @@ DATA = "data"; os.makedirs(DATA, exist_ok=True)
 
 @st.cache_resource(show_spinner=False)
 def get_ai_client():
-    """Get AI client (supports OpenAI, Groq, Hugging Face, Agnes AI)"""
+    """Get AI client (supports OpenAI, Groq, Hugging Face, OpenRouter)"""
     if not OPENAI_OK: 
         return None, "OpenAI library not installed"
     
@@ -30,7 +30,10 @@ def get_ai_client():
     key_source = "not found"
     
     if hasattr(st, 'secrets'):
-        if "OPENAI_API_KEY" in st.secrets:
+        if "OPENROUTER_API_KEY" in st.secrets:
+            api_key = st.secrets["OPENROUTER_API_KEY"]
+            key_source = "OPENROUTER_API_KEY from secrets"
+        elif "OPENAI_API_KEY" in st.secrets:
             api_key = st.secrets["OPENAI_API_KEY"]
             key_source = "OPENAI_API_KEY from secrets"
         elif "AGNES_API_KEY" in st.secrets:
@@ -44,28 +47,35 @@ def get_ai_client():
             key_source = "HUGGINGFACE_API_KEY from secrets"
     
     if not api_key:
-        api_key = (os.getenv("OPENAI_API_KEY") or os.getenv("AGNES_API_KEY") or 
-                   os.getenv("GROQ_API_KEY") or os.getenv("HUGGINGFACE_API_KEY"))
+        api_key = (os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY") or 
+                   os.getenv("AGNES_API_KEY") or os.getenv("GROQ_API_KEY") or 
+                   os.getenv("HUGGINGFACE_API_KEY"))
         if api_key:
             key_source = "environment variable"
     
     if not api_key:
-        return None, f"No API key found. Checked: {key_source}. Add OPENAI_API_KEY or AGNES_API_KEY to Streamlit secrets."
+        return None, f"No API key found. Add OPENROUTER_API_KEY or GROQ_API_KEY to Streamlit secrets."
     
     try:
-        # Detect which API based on key format and length
-        if api_key.startswith("sk-proj-"):
+        # Detect which API based on key format
+        if api_key.startswith("sk-or-"):
+            # OpenRouter API
+            client = OpenAI(
+                api_key=api_key,
+                base_url="https://openrouter.ai/api/v1"
+            )
+            return client, f"Connected to OpenRouter (key: {api_key[:15]}...)"
+        elif api_key.startswith("sk-proj-"):
             # OpenAI project key
             client = OpenAI(api_key=api_key)
             return client, f"Connected to OpenAI (key: {api_key[:15]}...)"
         elif api_key.startswith("sk-") and len(api_key) < 60:
-            # Agnes AI or similar proxy - try OpenAI first (most compatible)
+            # Try OpenAI first (most compatible)
             try:
                 client = OpenAI(api_key=api_key)
                 return client, f"Connected via OpenAI API (key: {api_key[:15]}...)"
             except:
-                # If OpenAI fails, it might be a custom service
-                return None, f"Key format not recognized. Agnes AI may not be OpenAI-compatible."
+                return None, f"Key format not recognized or invalid."
         elif api_key.startswith("sk-"):
             # Standard OpenAI key
             client = OpenAI(api_key=api_key)
@@ -116,7 +126,14 @@ def chat_with_ai(messages, client):
         
         # Choose models based on API
         models = []
-        if key.startswith("sk-proj-") or (key.startswith("sk-") and not key.startswith("sk-or-")):
+        if key.startswith("sk-or-"):
+            # OpenRouter - supports many models
+            models = [
+                "meta-llama/llama-3.1-70b-instruct",
+                "openai/gpt-3.5-turbo",
+                "anthropic/claude-3-haiku"
+            ]
+        elif key.startswith("sk-proj-") or (key.startswith("sk-") and not key.startswith("sk-or-")):
             # OpenAI
             models = ["gpt-3.5-turbo", "gpt-4o-mini"]
         elif key.startswith("hf_"):
