@@ -214,10 +214,54 @@ section[data-testid="stMain"],
 /* ════════════════════════════════════════════════════════════
    GLASS INPUT CARD (exact match)
 ════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   DARK GLASS INPUT CARD (Exact Behance Match)
+════════════════════════════════════════════════════════════ */
 .input-wrap {
   position:relative; z-index:2;
-  width:100%; max-width:700px;
-  margin:0 auto 1.5rem;
+  width:100%; max-width:720px;
+  margin:0 auto 2rem;
+  animation:fadeUp .8s .4s ease backwards;
+}
+.input-card-dark {
+  background:rgba(26,28,36,.9)!important;
+  backdrop-filter:blur(32px)!important;
+  border:1px solid rgba(255,255,255,.15)!important;
+  border-radius:18px!important;
+  padding:24px 28px!important;
+  box-shadow:
+    0 12px 44px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.12)!important;
+}
+/* Text input styling */
+.input-card-dark [data-testid="stTextInput"] input {
+  background:transparent!important;
+  border:none!important;
+  color:#fff!important;
+  font-size:0.96rem!important;
+  padding:12px 0 16px!important;
+  outline:none!important;
+  box-shadow:none!important;
+}
+.input-card-dark [data-testid="stTextInput"] input::placeholder {
+  color:rgba(255,255,255,0.35)!important;
+}
+/* Mode buttons */
+.input-card-dark .stButton button {
+  background:rgba(255,255,255,.08)!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  color:rgba(255,255,255,.68)!important;
+  font-size:0.85rem!important;
+  padding:8px 15px!important;
+  border-radius:10px!important;
+  font-weight:400!important;
+  transition:all .2s ease!important;
+}
+.input-card-dark .stButton button:hover {
+  background:rgba(255,255,255,.15)!important;
+  color:rgba(255,255,255,.95)!important;
+  border-color:rgba(255,255,255,.24)!important;
+}
   padding:0 20px;
   animation:fadeUp .7s .15s ease both;
 }
