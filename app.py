@@ -253,38 +253,38 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ════════════════════════════════════════════════════════════
-#  SIDEBAR — slim icon rail (exact match)
+#  SIDEBAR — slim vertical icon bar (LEFT EDGE ONLY)
 # ════════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown('<div class="sb-logo">✦</div>', unsafe_allow_html=True)
-
-    NAV = [
-        ("home",    "＋",  "New Chat"),
-        ("sources", "⊡",   "Sources"),
-        ("studio",  "⠿",   "Studio"),
-        ("settings","⚙",   "Settings"),
-    ]
-    for vk, ic, lb in NAV:
-        if st.button(ic, key=f"nav_{vk}", help=lb, use_container_width=True):
-            st.session_state.view = vk
-            st.rerun()
-
-    # dots at bottom like image
-    st.markdown("""
-<div style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);
-display:flex;flex-direction:column;align-items:center;gap:5px;">
-  <div style="width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.2);"></div>
-  <div style="width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.2);"></div>
-  <div style="width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.2);"></div>
-</div>
-""", unsafe_allow_html=True)
+    
+    # Minimal icon buttons - vertical stack
+    if st.button("💬", key="nav_home", help="Chat", use_container_width=True):
+        st.session_state.view = "home"
+        st.rerun()
+    
+    if st.button("🕐", key="nav_history", help="History", use_container_width=True):
+        st.session_state.view = "chat"
+        st.rerun()
+    
+    if st.button("📄", key="nav_docs", help="Documents", use_container_width=True):
+        st.session_state.view = "sources"
+        st.rerun()
+    
+    if st.button("🔍", key="nav_search", help="Search", use_container_width=True):
+        st.session_state.view = "studio"
+        st.rerun()
+    
+    if st.button("⚙", key="nav_settings", help="Settings", use_container_width=True):
+        st.session_state.view = "settings"
+        st.rerun()
 
 # ════════════════════════════════════════════════════════════
 #  HOME VIEW  — hero + glass input + chips
 # ════════════════════════════════════════════════════════════
 if st.session_state.view == "home":
 
-    # ── Hero ──────────────────────────────────────────────
+    # ── Hero Section ───────────────────────────────────────────
     st.markdown("""
 <div class="hero-wrap">
   <div class="hero-icon">
@@ -299,41 +299,61 @@ if st.session_state.view == "home":
             stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </div>
-  <h1 class="hero-title">How can i help you today?</h1>
+  <h1 class="hero-title">How can I help you today?</h1>
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Glass input card ───────────────────────────────────
-    st.markdown('<div class="input-wrap"><div class="input-card">', unsafe_allow_html=True)
+    # ── Dark Glass Input Card ───────────────────────────────────
+    st.markdown('<div class="input-wrap"><div class="input-card-dark">', unsafe_allow_html=True)
 
-    home_prompt = st.chat_input("What do you want to know ?", key="home_chat")
+    # Input field
+    home_prompt = st.text_input(
+        "What do you want to know?",
+        placeholder="What do you want to know?",
+        label_visibility="collapsed",
+        key="home_input"
+    )
 
-    # Card bottom bar
-    cb1, cb2, cb3 = st.columns([3, 5, 3])
-    with cb1:
+    # Bottom bar: Language + Mode + Icons
+    col1, col2, col3 = st.columns([2, 4, 2])
+    
+    with col1:
+        # Language dropdown (with icon)
+        st.markdown('<div style="display:flex;align-items:center;gap:8px;">', unsafe_allow_html=True)
         lang_list = list(LANGS.keys())
         cur_i = lang_list.index(st.session_state.language) if st.session_state.language in lang_list else 2
         picked = st.selectbox("", lang_list, index=cur_i, key="lang_home",
                               label_visibility="collapsed")
         if picked != st.session_state.language:
             st.session_state.language = picked
-    with cb2:
-        mode_pick = st.radio("", ["📄 Docs", "🌐 Web", "🧠 Chat"],
-                             horizontal=True, key="mode_home",
-                             label_visibility="collapsed")
-        st.session_state.mode = mode_pick
-    with cb3:
-        pass   # icons placeholder
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        # Mode buttons with icons (horizontal radio)
+        col_a, col_b, col_c = st.columns(3)
+        with col_a:
+            if st.button("📄 Docs", key="mode_docs", use_container_width=True):
+                st.session_state.mode = "📄 Docs"
+        with col_b:
+            if st.button("🌐 Web", key="mode_web", use_container_width=True):
+                st.session_state.mode = "🌐 Web"
+        with col_c:
+            if st.button("💬 Chat", key="mode_chat", use_container_width=True):
+                st.session_state.mode = "💬 Chat"
+    
+    with col3:
+        # Right side icons placeholder
+        st.markdown('<div style="text-align:right;opacity:0.4;font-size:0.9rem;">⚡</div>', unsafe_allow_html=True)
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-    # ── Action chips ───────────────────────────────────────
+    # ── Action Chips Below Input ────────────────────────────────
     st.markdown("""
 <div class="chips-row">
-  <div class="a-chip"><span class="a-chip-ic">✉️</span>Generate ideas</div>
-  <div class="a-chip"><span class="a-chip-ic">⚡</span>Motion concept</div>
-  <div class="a-chip"><span class="a-chip-ic">📈</span>Market analysis</div>
-  <div class="a-chip"><span class="a-chip-ic">❓</span>Ask AI anything</div>
+  <div class="a-chip"><span class="a-chip-ic">💡</span>Generate ideas</div>
+  <div class="a-chip"><span class="a-chip-ic">🎬</span>Motion concept</div>
+  <div class="a-chip"><span class="a-chip-ic">📊</span>Market analysis</div>
+  <div class="a-chip"><span class="a-chip-ic">💬</span>Ask AI anything</div>
 </div>
 """, unsafe_allow_html=True)
 
