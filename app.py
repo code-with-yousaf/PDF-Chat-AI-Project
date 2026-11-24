@@ -21,7 +21,7 @@ DATA = "data"; os.makedirs(DATA, exist_ok=True)
 
 @st.cache_resource(show_spinner=False)
 def get_ai_client():
-    """Get AI client (supports OpenAI, Groq, Hugging Face)"""
+    """Get AI client (supports OpenAI, Groq, Hugging Face, Agnes AI)"""
     if not OPENAI_OK: 
         return None, "OpenAI library not installed"
     
@@ -33,6 +33,9 @@ def get_ai_client():
         if "OPENAI_API_KEY" in st.secrets:
             api_key = st.secrets["OPENAI_API_KEY"]
             key_source = "OPENAI_API_KEY from secrets"
+        elif "AGNES_API_KEY" in st.secrets:
+            api_key = st.secrets["AGNES_API_KEY"]
+            key_source = "AGNES_API_KEY from secrets"
         elif "GROQ_API_KEY" in st.secrets:
             api_key = st.secrets["GROQ_API_KEY"]
             key_source = "GROQ_API_KEY from secrets"
@@ -41,17 +44,29 @@ def get_ai_client():
             key_source = "HUGGINGFACE_API_KEY from secrets"
     
     if not api_key:
-        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("GROQ_API_KEY") or os.getenv("HUGGINGFACE_API_KEY")
+        api_key = (os.getenv("OPENAI_API_KEY") or os.getenv("AGNES_API_KEY") or 
+                   os.getenv("GROQ_API_KEY") or os.getenv("HUGGINGFACE_API_KEY"))
         if api_key:
             key_source = "environment variable"
     
     if not api_key:
-        return None, f"No API key found. Checked: {key_source}. Add OPENAI_API_KEY to Streamlit secrets."
+        return None, f"No API key found. Checked: {key_source}. Add OPENAI_API_KEY or AGNES_API_KEY to Streamlit secrets."
     
     try:
-        # Detect which API based on key format
-        if api_key.startswith("sk-") and not api_key.startswith("sk-or-"):
-            # OpenAI API (default)
+        # Detect which API based on key format and length
+        if api_key.startswith("sk-proj-"):
+            # OpenAI project key
+            client = OpenAI(api_key=api_key)
+            return client, f"Connected to OpenAI (key: {api_key[:15]}...)"
+        elif api_key.startswith("sk-") and len(api_key) < 60:
+            # Agnes AI or similar proxy service (shorter keys)
+            client = OpenAI(
+                api_key=api_key,
+                base_url="https://api.agnes-ai.com/v1"  # Agnes AI endpoint
+            )
+            return client, f"Connected to Agnes AI (key: {api_key[:15]}...)"
+        elif api_key.startswith("sk-"):
+            # Standard OpenAI key
             client = OpenAI(api_key=api_key)
             return client, f"Connected to OpenAI (key: {api_key[:15]}...)"
         elif api_key.startswith("hf_"):
@@ -62,7 +77,7 @@ def get_ai_client():
             )
             return client, "Connected to Hugging Face"
         else:
-            # Groq API
+            # Groq API (gsk_...)
             client = OpenAI(
                 api_key=api_key,
                 base_url="https://api.groq.com/openai/v1"
