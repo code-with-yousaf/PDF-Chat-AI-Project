@@ -104,23 +104,33 @@ def chat_with_ai(messages, client):
         user_msg = messages[-1]["content"].lower() if messages else ""
         
         # Simple keyword-based demo responses
-        if "hello" in user_msg or "hi" in user_msg or "hey" in user_msg:
-            return "👋 Hello! I'm your AI Assistant. I'm currently in demo mode. To enable full AI features, please add your API key (Groq, Hugging Face, or OpenAI) in the Streamlit secrets.\n\n**Free API Options:**\n- Groq (fastest, 14k requests/day)\n- Hugging Face (unlimited)\n- Together AI ($25 free credit)\n\nFor now, enjoy the beautiful UI! ✨"
+        if "hello" in user_msg or "hi" in user_msg or "hey" in user_msg or "assalam" in user_msg:
+            return "👋 **Hello! Welcome to AI Assistant Dashboard!**\n\nI'm currently running in **demo mode** to showcase this beautiful interface.\n\n**✨ Features You Can See:**\n- 🌌 Stunning space theme with animated stars\n- 💬 Clean chat interface\n- 📄 Document upload section\n- 🎨 Studio tools\n- ⚙️ Settings panel\n- 🌍 Multi-language support\n\n*This is a portfolio showcase project demonstrating modern UI/UX design and full-stack development skills!*"
         
-        elif "how are you" in user_msg or "kaise ho" in user_msg:
-            return "I'm doing great! 😊 This is a demo response. Connect an AI API to get real intelligent responses!"
+        elif "how are you" in user_msg or "kaise ho" in user_msg or "kaisa hai" in user_msg:
+            return "I'm doing great! 😊\n\nThis is a **demo response** showing how the chat interface works. The UI is fully functional with beautiful animations and smooth interactions!\n\n*In production mode with an API key, I'd provide real AI-powered intelligent responses.*"
         
         elif "help" in user_msg or "mada" in user_msg:
-            return "**Available Features:**\n\n🏠 **Home** - Start a new chat\n💬 **Chat** - Talk with AI assistant\n📄 **Sources** - Upload PDF documents\n🎨 **Studio** - AI tools and features\n⚙️ **Settings** - Configure preferences\n\n*Full AI features available after adding API key!*"
+            return "**📚 Available Features:**\n\n🏠 **Home View**\n- Beautiful hero section\n- Glass input card\n- Quick action chips\n\n💬 **Chat View** (You're here!)\n- Message history\n- Typing indicators\n- Smooth animations\n\n📄 **Sources**\n- PDF upload interface\n- Document management\n- Note-taking system\n\n🎨 **Studio**\n- AI tools access\n- Quick actions\n- Feature shortcuts\n\n⚙️ **Settings**\n- Language preferences\n- Theme options\n- Configuration panel\n\n---\n*Navigate using the icon sidebar on the left!*"
+        
+        elif "project" in user_msg or "about" in user_msg or "details" in user_msg:
+            return "**🌟 AI Assistant SaaS Dashboard**\n\n**Tech Stack:**\n- Frontend: Streamlit + Custom CSS\n- Backend: Python 3.11+\n- AI: Multi-provider support (OpenAI, Groq, Hugging Face)\n- Deployment: GitHub + Streamlit Cloud\n\n**Key Features:**\n- ✅ Beautiful deep space UI\n- ✅ 60 animated twinkling stars\n- ✅ Glassmorphism design\n- ✅ Responsive layout\n- ✅ Multi-language support\n- ✅ Production-ready code\n\n**Developer:** Mayan Builds  \n**GitHub:** https://github.com/code-with-yousaf/PDF-Chat-AI-Project\n\n*View the complete project report for detailed documentation!*"
+        
+        elif "feature" in user_msg or "capability" in user_msg or "can you" in user_msg:
+            return "**🚀 Capabilities (Demo Mode):**\n\n**Current (Demo):**\n- ✅ Beautiful UI showcase\n- ✅ Smooth animations\n- ✅ Interactive navigation\n- ✅ Responsive design\n- ✅ Professional layout\n\n**With API Key (Production):**\n- 🤖 Real AI conversations\n- 📄 PDF document analysis\n- 🌐 Web search integration\n- 🎙️ Voice input/output\n- 💡 Context-aware responses\n- 🌍 Multilingual AI chat\n\n*Connect an API key to unlock full AI features!*"
+        
+        elif "thank" in user_msg or "thanks" in user_msg or "shukriya" in user_msg:
+            return "You're welcome! 😊\n\nI hope you enjoyed exploring this **AI Assistant Dashboard**!\n\n**Key Highlights:**\n- 🎨 Modern SaaS design\n- ⚡ Smooth performance\n- 📱 Responsive layout\n- 🌟 Professional quality\n\nFeel free to explore all the views using the sidebar!\n\n*Happy exploring!* ✨"
         
         else:
-            return f"🤖 **Demo Mode Active**\n\nYou said: *\"{messages[-1]['content']}\"*\n\nThis is a placeholder response. To get real AI-powered answers:\n\n1. Get a free API key:\n   - **Groq**: https://console.groq.com (fastest)\n   - **Hugging Face**: https://huggingface.co/settings/tokens\n   - **OpenRouter**: https://openrouter.ai/keys\n\n2. Add to Streamlit secrets:\n   ```\n   OPENAI_API_KEY = \"your_key\"\n   ```\n\n3. Enjoy unlimited AI chat! 🚀\n\n---\n*Meanwhile, explore the beautiful space-themed UI!* ✨"
+            return f"🤖 **Demo Response**\n\nYou said: *\"{messages[-1]['content']}\"*\n\nThis is an **intelligent demo mode** showcasing the chat interface. The UI demonstrates:\n\n✨ **Design Features:**\n- Clean message bubbles\n- Smooth typing animations\n- Beautiful space theme\n- Professional layout\n\n📊 **Technical Stack:**\n- Streamlit framework\n- Custom CSS styling\n- Python backend\n- Multi-API architecture\n\n💡 **Try asking:**\n- \"Hello\" - Welcome message\n- \"Help\" - Feature guide\n- \"About project\" - Technical details\n- \"Features\" - Capability list\n\n---\n*This is a portfolio showcase demonstrating modern web development and UI/UX design skills!* 🚀"
     
     try:
         # Detect API type from key
         key = ""
         if hasattr(st, 'secrets'):
-            key = (st.secrets.get("OPENAI_API_KEY", "") or 
+            key = (st.secrets.get("OPENROUTER_API_KEY", "") or
+                   st.secrets.get("OPENAI_API_KEY", "") or 
                    st.secrets.get("GROQ_API_KEY", "") or 
                    st.secrets.get("HUGGINGFACE_API_KEY", ""))
         
